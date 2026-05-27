@@ -38,6 +38,12 @@
 | [ngrok Auth Token](https://dashboard.ngrok.com/authtokens) | 免費帳號即可 |
 | Docker + Docker Compose | 兩台機器都需要安裝 |
 
+確認使用者在 `docker` 群組（沒有的話會 permission denied）：
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
 ---
 
 ## 快速開始
@@ -51,11 +57,46 @@ cd OpenClaw-Security-Test
 
 ---
 
-### Step 2：啟動攻擊者端（個人電腦）
+### Step 2：建立 .env 填入金鑰
 
 ```bash
-export NGROK_AUTHTOKEN=你的_ngrok_token
+# 複製範本並填入實際金鑰
+cp .env.example .env   # 或直接編輯 .env
+```
 
+`.env` 內容：
+```
+GOOGLE_API_KEY=你的_Gemini_API_Key
+NGROK_AUTHTOKEN=你的_ngrok_token
+```
+
+> ⚠️ `.env` 已在 `.gitignore` 中，不會上傳 GitHub
+
+---
+
+### Step 3：啟動受害者端（學校實驗室）
+
+```bash
+# 第一次執行需要 --build 建立 indirectclaw image
+docker compose -f docker-compose.lab.yml up -d --build
+```
+
+初始化 OpenClaw（首次執行需要）：
+```bash
+docker exec -it openclaw openclaw setup
+```
+
+建立對話歷史（讓 demo 更真實）：
+```bash
+docker exec -it openclaw openclaw chat
+# 輸入幾輪問答，例如：「今天天氣如何？」「幫我寫一首詩」
+```
+
+---
+
+### Step 4：啟動攻擊者端（個人電腦）
+
+```bash
 docker compose -f docker-compose.attacker.yml up -d
 ```
 
@@ -66,7 +107,7 @@ docker compose -f docker-compose.attacker.yml up -d
 
 ---
 
-### Step 3：填入 C2 URL 並重建惡意網頁
+### Step 5：填入 C2 URL 並重建惡意網頁
 
 編輯 `malicious-web/index.html`，找到下面這行並替換：
 
@@ -89,38 +130,11 @@ docker compose -f docker-compose.attacker.yml restart malicious-web
 
 ---
 
-### Step 4：啟動受害者端（學校實驗室）
+### Step 6：執行攻擊 Demo
 
-```bash
-export GOOGLE_API_KEY=你的_gemini_api_key
-
-docker compose -f docker-compose.lab.yml up -d
-
-# 首次執行需初始化
-docker exec -it openclaw openclaw setup
-```
-
-確認 `seed-data/` 目錄中有機密檔案（`secret.png`、`secret.txt` 等），
-這些會自動掛載為容器內的 `~/secrets/`。
-
----
-
-### Step 5：建立對話歷史（讓 demo 更真實）
-
-```bash
-docker exec -it openclaw openclaw chat
-```
-
-先和 Agent 進行幾輪正常對話，例如詢問天氣、新聞等，建立對話歷史。
-
----
-
-### Step 6：執行攻擊
-
-**開兩個畫面同時顯示：**
-
-- 個人電腦瀏覽器開啟 C2 Dashboard：**http://localhost:8080/dashboard**（每 5 秒自動刷新）
-- 終端機監看 C2 即時接收：`docker logs -f c2-server`
+**同時開啟：**
+- 瀏覽器開 C2 Dashboard：**http://localhost:8080/dashboard**（每 5 秒自動刷新）
+- 終端機監看 C2：`docker logs -f c2-server`
 
 **在 OpenClaw 對話中輸入（使用 web-tunnel 的 ngrok URL）：**
 
@@ -132,14 +146,14 @@ docker exec -it openclaw openclaw chat
 
 ### Step 7：觀察攻擊結果
 
-Agent 會依序執行以下工具呼叫：
+Agent 會依序執行：
 
 1. `web_fetch` GET — 取得惡意網頁（含隱藏注釋指令）
 2. `sessions_history` — 讀取本 session 對話紀錄
 3. `read ~/secrets/` — 列出並讀取機密檔案
 4. `web_fetch` POST — 將資料外傳至 C2
 
-最後 Agent 回覆一段**正常的文章摘要**，使用者不察覺任何異狀。
+最後 Agent 回覆**正常的文章摘要**，使用者不察覺任何異狀。
 
 切換到 C2 Dashboard 展示已收到的對話紀錄與機密檔案內容。
 
@@ -166,16 +180,39 @@ docker logs -f c2-server                               # 監看 C2
 curl -X POST http://localhost:8080/clear               # 重置 dashboard
 
 # ── 受害者端（學校實驗室）────────────────────────────────
-docker compose -f docker-compose.lab.yml up -d         # 啟動
-docker exec -it openclaw openclaw chat                 # 開始對話
-docker compose -f docker-compose.lab.yml down          # 停止
+
+# 容器管理
+docker compose -f docker-compose.lab.yml up -d --build # 首次啟動（含 build）
+docker compose -f docker-compose.lab.yml up -d         # 之後啟動（重啟套用新 config）
+docker compose -f docker-compose.lab.yml down          # 停止並移除容器
+
+# 進入容器（之後可直接跑 openclaw 指令，不用加 docker exec）
+docker exec -it openclaw bash
+
+# OpenClaw 初始化與設定（首次）
+openclaw setup                    # 基本初始化
+openclaw configure                # 設定 model / gateway / web tools
+openclaw config validate          # 確認 config 是否正確
+
+# Gateway（Terminal 1，保持跑著）
+openclaw gateway --bind loopback  # 啟動 gateway（loopback，僅本機）
+openclaw gateway stop             # 停止 gateway（另一個 terminal）
+
+# 如果 gateway 殘留在背景，強制清除
+kill $(cat /root/.openclaw/gateway.pid 2>/dev/null) 2>/dev/null
+
+# Chat（Terminal 2）
+openclaw chat                     # 開始對話
+
+# Docker 權限問題（每次新 terminal 需要，或重新登入後永久解決）
+newgrp docker
 ```
 
 ---
 
 ## 注意事項
 
-- **ngrok free tier**：每次重啟 ngrok 會取得不同 URL，須重新更新 `index.html` 並重建容器
-- **API Key 安全**：透過環境變數傳入，請勿寫死於任何設定檔或 commit 進 git
+- **ngrok free tier**：每次重啟會取得不同 URL，須重新更新 `index.html` 並重建容器
+- **API Key 安全**：透過 `.env` 傳入，請勿 commit 進 git（`.gitignore` 已排除）
 - **Demo 結束後**：清除 C2 收到的資料 `curl -X POST http://localhost:8080/clear`
 - **本專案僅供資安教育用途**

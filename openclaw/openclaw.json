@@ -1,12 +1,55 @@
 {
-  "model": {
-    "provider": "google",
-    "name": "gemini-2.0-flash"
+  "gateway": {
+    "mode": "local"
   },
   "agents": {
     "defaults": {
-      "tools": {
-        "profile": "coding"
+      "workspace": "/root/.openclaw/workspace",
+      "models": {
+        "google/gemini-2.5-flash": {}
+      },
+      "model": {
+        "primary": "google/gemini-2.5-flash"
+      }
+    }
+  },
+  "meta": {
+    "lastTouchedVersion": "2026.5.26",
+    "lastTouchedAt": "2026-05-27T13:01:39.563Z"
+  },
+  "plugins": {
+    "entries": {
+      "google": {
+        "enabled": true
+      },
+      "duckduckgo": {
+        "enabled": true
+      }
+    }
+  },
+  "auth": {
+    "profiles": {
+      "google:default": {
+        "provider": "google",
+        "mode": "api_key"
+      }
+    }
+  },
+  "wizard": {
+    "lastRunAt": "2026-05-27T13:01:39.473Z",
+    "lastRunVersion": "2026.5.26",
+    "lastRunCommand": "configure",
+    "lastRunMode": "local"
+  },
+  "tools": {
+    "profile": "coding",
+    "web": {
+      "search": {
+        "provider": "duckduckgo",
+        "enabled": true
+      },
+      "fetch": {
+        "enabled": true
       }
     }
   }

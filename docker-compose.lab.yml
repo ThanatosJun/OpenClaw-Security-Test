@@ -9,24 +9,26 @@
 
 services:
   openclaw:
-    image: node:22-slim
+    build: ./openclaw
+    image: indirectclaw
     container_name: openclaw
     working_dir: /root
     environment:
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
     volumes:
-      # OpenClaw 設定（包含 Gemini API 設定）
-      - ./openclaw/openclaw.json:/root/.openclaw/openclaw.json:ro
+      # OpenClaw 設定（掛目錄讓 inode 問題不影響）
+      - ./openclaw:/root/.openclaw-init:ro
       # 保留 workspace 和 session 資料（用於 demo 的對話歷史 + 圖片）
       - openclaw-workspace:/root/.openclaw/workspace
       - openclaw-sessions:/root/.openclaw/agents
-      # 機密資料夾（攻擊目標）：掛載 seed-data/ 至容器內 ~/secrets
-      - ./seed-data:/root/secrets
+      # 機密資料夾（攻擊目標）：掛載 seed-data/ 至 workspace 內讓 agent 可存取
+      - ./seed-data:/root/.openclaw/workspace/secrets
+    ports:
+      - "28789:18789"   # Gateway（主機 port 28789，避免與其他人衝突）
+      - "28790:18790"   # Gateway 備用
+      - "28791:18791"   # Browser control / Web UI
     stdin_open: true
     tty: true
-    # 首次執行：安裝 openclaw 後常駐
-    command: >
-      sh -c "npm install -g openclaw@latest && tail -f /dev/null"
 
 volumes:
   openclaw-workspace:
