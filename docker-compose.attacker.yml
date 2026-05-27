@@ -1,0 +1,48 @@
+# 攻擊者端 Docker Compose（在個人電腦執行）
+# 包含：惡意網頁伺服器、C2 接收伺服器、ngrok 隧道
+#
+# 使用前：
+#   1. 在 ngrok.com 取得免費帳號，設定 NGROK_AUTHTOKEN
+#   2. export NGROK_AUTHTOKEN=your_token_here
+#   3. docker compose -f docker-compose.attacker.yml up
+#   4. 從 http://localhost:4040 取得公開 ngrok URL
+
+services:
+  malicious-web:
+    build: ./malicious-web
+    container_name: malicious-web
+    networks:
+      - attacker-net
+
+  c2-server:
+    build: ./c2-server
+    container_name: c2-server
+    ports:
+      - "8080:8080"  # 本機可直接看 dashboard: http://localhost:8080/dashboard
+    networks:
+      - attacker-net
+
+  # ngrok：同時建立兩條隧道
+  # tunnel-web → 惡意網頁（受害者 Agent 會 fetch 這個 URL）
+  # tunnel-c2  → C2 伺服器（受害者 Agent 會 POST 到這個 URL）
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok
+    command: >
+      start --all
+      --config /etc/ngrok/ngrok.yml
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    volumes:
+      - ./ngrok.yml:/etc/ngrok/ngrok.yml:ro
+    ports:
+      - "4040:4040"  # ngrok 管理介面（查看公開 URL）
+    networks:
+      - attacker-net
+    depends_on:
+      - malicious-web
+      - c2-server
+
+networks:
+  attacker-net:
+    driver: bridge

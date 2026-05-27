@@ -1,0 +1,19 @@
+# ngrok 設定：建立兩條隧道
+# - web-tunnel：指向惡意網頁伺服器（port 80）
+# - c2-tunnel： 指向 C2 接收伺服器（port 8080）
+#
+# 啟動後到 http://localhost:4040 查看實際分配到的公開 URL
+# 將這兩個 URL 填入 malicious-web/index.html 的注入指令中
+
+version: "3"
+
+tunnels:
+  web-tunnel:
+    addr: malicious-web:80
+    proto: http
+    inspect: true
+
+  c2-tunnel:
+    addr: c2-server:8080
+    proto: http
+    inspect: true

@@ -1,0 +1,13 @@
+{
+  "model": {
+    "provider": "google",
+    "name": "gemini-2.0-flash"
+  },
+  "agents": {
+    "defaults": {
+      "tools": {
+        "profile": "coding"
+      }
+    }
+  }
+}

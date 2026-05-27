@@ -1,0 +1,11 @@
+# 機密資料夾（demo 用的目標檔案，不上傳 git）
+seed-data/
+
+# 環境變數檔（如果使用 .env 存放 API Key，絕對不能上傳）
+.env
+.env.local
+.env.*.local
+
+# 系統檔
+.DS_Store
+Thumbs.db
