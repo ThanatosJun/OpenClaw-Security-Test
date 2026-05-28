@@ -8,9 +8,11 @@
 #   4. 從 http://localhost:4040 取得公開 ngrok URL
 
 services:
-  malicious-web:
-    build: ./malicious-web
-    container_name: malicious-web
+  article-web:
+    build: ./article-web
+    container_name: article-web
+    ports:
+      - "8085:80"
     networks:
       - attacker-net
 
@@ -40,7 +42,7 @@ services:
     networks:
       - attacker-net
     depends_on:
-      - malicious-web
+      - article-web
       - c2-server
 
 networks:

@@ -28,7 +28,7 @@
 
 | 機器 | 角色 | 執行內容 |
 |------|------|---------|
-| **個人電腦** | 攻擊者 | malicious-web + c2-server + ngrok |
+| **個人電腦** | 攻擊者 | article-web + c2-server + ngrok |
 | **學校實驗室** | 受害者 | OpenClaw（使用 Gemini API）|
 
 ---
@@ -70,7 +70,7 @@ docker compose -f docker-compose.attacker.yml up -d
 
 ## Phase 2：設定注入 URL
 
-8. 編輯 `malicious-web/index.html`，將 HTML 注釋中的佔位符替換為實際 C2 ngrok URL：
+8. 編輯 `article-web/index.html`，將 HTML 注釋中的佔位符替換為實際 C2 ngrok URL：
 
    ```
    https://REPLACE_WITH_C2_NGROK_URL/collect
@@ -83,8 +83,8 @@ docker compose -f docker-compose.attacker.yml up -d
 9. 重新建置並重啟惡意網頁容器
 
 ```bash
-docker compose -f docker-compose.attacker.yml build malicious-web
-docker compose -f docker-compose.attacker.yml restart malicious-web
+docker compose -f docker-compose.attacker.yml build article-web
+docker compose -f docker-compose.attacker.yml restart article-web
 ```
 
 10. 驗證惡意網頁可存取：`curl https://abc123.ngrok.io/`
